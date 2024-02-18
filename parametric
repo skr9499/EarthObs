@@ -1,0 +1,101 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+# Constants
+G = 6.674 * (10**-11)  # Gravitational constant (m^3/kg/s^2)
+M = 5.972 * (10**24)   # Earth's mass (kg)
+mu = G * M             # Standard gravitational parameter
+Re = 6371000           # Earth's radius (m)
+rad2deg = 180/math.pi
+deg2rad = math.pi/180
+
+# Altitudes in meters
+H = 700 * 1000 # orbit height design constraint
+R = Re + H
+
+Elevation_angle = np.linspace(10, 89, 100) # min elevation angle variate design constraint
+Orbit_TimePeriod = np.zeros(100)
+Orbital_Vel= np.zeros(100)
+Groundtrack_vel = np.zeros(100)
+Angular_radius_earth = np.zeros(100)
+max_nadir_ang = np.zeros(100)
+Earth_central_angle_max_for0_elevation = np.zeros(100)
+Earth_central_angle_max = np.zeros(100)
+Slant_range = np.zeros(100)
+SwathWidth_angle = np.zeros(100)
+SW = np.zeros(100)
+GSD_max_alongtrack = np.zeros(100)
+Along_track_FOV = np.zeros(100)
+GSD_max_crosstrack = np.zeros(100)
+sampling_crosstrack = np.zeros(100)
+cross_track_FOV = np.zeros(100)
+cross_track_pixel_resolution = np.zeros(100)
+along_track_pixel_resolution = np.zeros(100)
+crosstrack_pixels = np.zeros(100)
+along_track_pixel= np.zeros(100)
+Megapixel_camera = np.zeros(100)
+Swath_recorded_along_track_in1sec= np.zeros(100)
+No_pixel_recorded_in1sec = np.zeros(100)
+Bits_to_encode = np.zeros(100)
+Spectral_bands = np.zeros(100)
+Data_rate = np.zeros(100)
+
+# mission geometery
+for i in range(100):
+    Orbit_TimePeriod[i] = 2 * math.pi * math.sqrt((R**3) / mu) / 60  
+    Orbital_Vel[i] = math.sqrt(mu / R) / 1000 
+    Groundtrack_vel[i] =  Orbital_Vel[i] - 0.748 # vectorial addition to relative to earth rotation!! or not refer stanford
+    Angular_radius_earth[i] = math.asin(Re/R)*(rad2deg) #rho
+    max_nadir_ang[i] = math.asin(math.sin(Angular_radius_earth[i]*deg2rad)*math.cos(Elevation_angle[i]*deg2rad))*rad2deg #etamax
+    Earth_central_angle_max_for0_elevation[i]= math.acos(Re/R)*(rad2deg) # lambda0
+    Earth_central_angle_max[i]= 90-max_nadir_ang[i]-Elevation_angle[i] #lambda max
+    Slant_range[i] = Re*(math.sin(Earth_central_angle_max[i]*deg2rad))/(math.sin(max_nadir_ang[i]*deg2rad)) #in m
+    SwathWidth_angle[i] = 2*Earth_central_angle_max[i]
+    SW[i] = 2*H*math.tan((SwathWidth_angle[i]*deg2rad)/2)/1000 #need to chk
+
+#pixel parameter and data rate
+    GSD_max_alongtrack[i]  = 1.12 *1000 # ground sampling distance design constraint
+    Along_track_FOV[i] = GSD_max_alongtrack[i]/Slant_range[i] * rad2deg
+    GSD_max_crosstrack[i]  = 1.12 *1000 # ground sampling distance design constraint also should this be symmetrical?? SAR is assyemtric
+    sampling_crosstrack[i] = 3 # design constraint
+    cross_track_FOV[i] = (GSD_max_crosstrack[i]/Slant_range[i]) * rad2deg/sampling_crosstrack[i]
+    cross_track_pixel_resolution[i] = cross_track_FOV[i]*sampling_crosstrack[i]*H*deg2rad # need to reach 100 X
+    along_track_pixel_resolution[i] = Along_track_FOV[i] *H *deg2rad # need to reach 100 Y
+    crosstrack_pixels[i] = 2*max_nadir_ang[i]/cross_track_FOV[i] #Zc
+    along_track_pixel[i] = 2*max_nadir_ang[i]/Along_track_FOV[i]
+    Megapixel_camera[i] =crosstrack_pixels[i]*along_track_pixel[i]/1e6
+    Swath_recorded_along_track_in1sec[i] = Groundtrack_vel[i]*1000/along_track_pixel_resolution[i] # Za Number of successive swaths without gaps at nadir
+    No_pixel_recorded_in1sec[i] = crosstrack_pixels[i]*Swath_recorded_along_track_in1sec[i] #Z
+    Bits_to_encode[i] = 14 #B Design constraint
+    Spectral_bands[i] = 5 #Design constraint
+    Data_rate[i] = No_pixel_recorded_in1sec[i]*Bits_to_encode[i]*Spectral_bands[i]
+
+
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+ax.scatter(Elevation_angle, max_nadir_ang, cross_track_pixel_resolution)
+
+ax.set_xlabel('Elevation Angle')
+ax.set_ylabel('Max Nadir Angle')
+ax.set_zlabel('Cross Track Pixel Resolution')
+
+plt.show()
+
+
+
+
+# # Plotting
+# plt.figure(1)
+# plt.plot(H / 1000, Orbit_TimePeriod, marker='o', linestyle='-')
+# plt.title('Orbit Time Period vs. Altitude')
+# plt.xlabel('Altitude (km)')
+# plt.ylabel('Time Period (minutes)')
+
+# plt.figure(2)
+# plt.plot(H / 1000, Orbital_Vel, marker='o', linestyle='-')
+# plt.title('Orbit Time Period vs. Altitude')
+# plt.xlabel('Altitude (km)')
+# plt.ylabel('Time Period (minutes)')
