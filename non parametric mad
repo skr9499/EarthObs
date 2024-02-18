@@ -1,0 +1,65 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+# Constants
+G = 6.674 * (10**-11)  # Gravitational constant (m^3/kg/s^2)
+M = 5.972 * (10**24)   # Earth's mass (kg)
+mu = G * M             # Standard gravitational parameter
+Re = 6371000           # Earth's radius (m)
+rad2deg = 180/math.pi
+deg2rad = math.pi/180
+
+# Altitudes in meters
+H = 700 * 1000 # orbit height design constraint
+R = Re + H
+Elevation_angle = 20 # min elevation angle variate design constraint
+# mission geometery
+
+Orbit_TimePeriod = 2 * math.pi * math.sqrt((R**3) / mu) / 60  
+Orbital_Vel = math.sqrt(mu / R) / 1000 
+Groundtrack_vel =  Orbital_Vel - 0.748 # vectorial addition to relative to earth rotation!!
+Angular_radius_earth = math.asin(Re/R)*(rad2deg) #rho
+max_nadir_ang = math.asin(math.sin(Angular_radius_earth*deg2rad)*math.cos(Elevation_angle*deg2rad))*rad2deg #etamax
+Earth_central_angle_max_for0_elevation= math.acos(Re/R)*(rad2deg) # lambda0
+Earth_central_angle_max= 90-max_nadir_ang-Elevation_angle #lambda max
+Slant_range = Re*(math.sin(Earth_central_angle_max*deg2rad))/(math.sin(max_nadir_ang*deg2rad)) #in m
+SwathWidth_angle = 2*Earth_central_angle_max
+SW = 2*H*math.tan((SwathWidth_angle*deg2rad)/2)/1000 #need to chk
+
+#pixel parameter and data rate
+GSD_max_alongtrack  = 1.12 *1000 # ground sampling distance design constraint
+Along_track_FOV = GSD_max_alongtrack/Slant_range * rad2deg
+GSD_max_crosstrack  = 1.12 *1000 # ground sampling distance design constraint also should this be symmetrical?? SAR is assyemtric
+sampling_crosstrack = 3 # design constraint
+cross_track_FOV = (GSD_max_crosstrack/Slant_range) * rad2deg/sampling_crosstrack
+cross_track_pixel_resolution = cross_track_FOV*sampling_crosstrack*H*deg2rad # need to reach 100 X
+along_track_pixel_resolution = Along_track_FOV *H *deg2rad # need to reach 100 Y
+crosstrack_pixels = 2*max_nadir_ang/cross_track_FOV #Zc
+along_track_pixel = 2*max_nadir_ang/Along_track_FOV
+Megapixel_camera =crosstrack_pixels*along_track_pixel/1e6
+Swath_recorded_along_track_in1sec = Groundtrack_vel*1000/along_track_pixel_resolution # Za Number of successive swaths without gaps at nadir
+No_pixel_recorded_in1sec = crosstrack_pixels*Swath_recorded_along_track_in1sec #Z
+Bits_to_encode = 14 #B Design constraint
+Spectral_bands = 5 #Design constraint
+Data_rate = No_pixel_recorded_in1sec*Bits_to_encode*Spectral_bands
+
+
+
+
+
+
+
+
+# # Plotting
+# plt.figure(1)
+# plt.plot(H / 1000, Orbit_TimePeriod, marker='o', linestyle='-')
+# plt.title('Orbit Time Period vs. Altitude')
+# plt.xlabel('Altitude (km)')
+# plt.ylabel('Time Period (minutes)')
+
+# plt.figure(2)
+# plt.plot(H / 1000, Orbital_Vel, marker='o', linestyle='-')
+# plt.title('Orbit Time Period vs. Altitude')
+# plt.xlabel('Altitude (km)')
+# plt.ylabel('Time Period (minutes)')
