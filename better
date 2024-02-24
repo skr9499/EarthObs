@@ -1,0 +1,114 @@
+clear all
+close all
+clc
+
+G = 6.674 * (10^-11);  % Gravitational constant (m^3/kg/s^2)
+M = 5.972 * (10^24);    % Earth's mass (kg)
+Re = 6371000;           % Earth's radius (m)
+mu = G*M;
+
+H= [200 500 700 1000 1500 2000]*1e3;       %-----tradeoff
+% H= 700e3;
+% eta = 57.85;
+eta =2:1:90; %nadir angle (deg) camera swing in satellite -----tradeoff
+GSD = 100; %-----tradeoff
+
+rho = zeros(size(H));
+Orbit_TimePeriod = zeros(size(H));
+inclination = zeros(size(H));
+angular_freq = zeros(size(H));
+Longitude_shift_perorbit = zeros(size(H));
+epsilon = zeros(size(H,1),size(eta,2));
+lambda = zeros(size(H,1),size(eta,2));
+swath_width_angle = zeros(size(H,1),size(eta,2));
+Optimal_max_nadir_angle =zeros(size(H,1),size(eta,2));
+Slant_height= zeros(size(H,1),size(eta,2));
+thetaR= zeros(size(H,1),size(eta,2));
+Non_nadir_resolution_cross_track= zeros(size(H,1),size(eta,2));
+Non_nadir_resolution_along_track = zeros(size(H,1),size(eta,2));
+count = 0;
+notincount = 0;
+markup = {};
+
+% Nested loop for calculations
+for i = 1:length(H)
+    rho(i) = asind(Re/(Re+H(i)));
+    Orbit_TimePeriod(i) = 2 * pi * sqrt(((Re+H(i))^3) / mu) / 60; % orbit time period (mins)
+    Longitude_shift_perorbit(i) = Orbit_TimePeriod(i)*(360/(24*60)); % should be closer to 2*lambda for covering the rotating earth at least twice  
+    inclination(i) = acosd((-2.89e-17)*Orbit_TimePeriod(i)*(Re+H(i))^2);
+    for j = 1:length(eta)
+        epsilon(i,j) = real(acosd(sind(eta(j))/sind(rho(i)))) ; % elevation angle (deg)
+        lambda(i,j) = 90-eta(j)-epsilon(i,j); % half of swath width angle or ground track angle
+        swath_width_angle(i,j) = 2*lambda(i,j);
+        Optimal_max_nadir_angle(i,j)=abs(swath_width_angle(i,j) - Longitude_shift_perorbit(i));
+%         if (abs(swath_width_angle(i,j) - Longitude_shift_perorbit(i) )<=2)
+%             markup{end+1} = [H(i), eta(j)];
+%             count = count + 1;
+%             fprintf('Condition executed for H(%d), eta(%d) = %d, %d\n', i, j, H(i), eta(j));
+%         else
+%             notincount = notincount + 1;
+%         end
+
+        Slant_height(i,j) = Re * sind(lambda(i,j)) / sind(eta(j)); % in m
+        thetaR(i,j) = GSD*180/(H(i)*pi);
+        Non_nadir_resolution_along_track(i,j) = thetaR(i,j)*Slant_height(i,j)*pi/180;
+        Non_nadir_resolution_cross_track(i,j)=Non_nadir_resolution_along_track(i,j)/cosd(eta(j))^2 ;
+
+    end
+end
+
+[~, max_index] = max(Slant_height,[],2);
+
+figure;
+for i = 1:length(H)
+    max_index_row = max_index(i)-1;
+    plot(eta(1:max_index_row), epsilon(i,1:max_index_row), 'LineWidth', 1.5);
+    hold on;
+end
+xlabel('Nadir Angle (\eta) [degrees]');
+ylabel('Elevation Angle (\epsilon) [degrees]');
+title('\epsilon vs \eta');
+legend('H = 200 km', 'H = 500 km', 'H = 700 km', 'H = 1000 km', 'H = 1500 km', 'H = 2000 km');
+grid on;
+hold off;
+
+figure;
+for i = 1:length(H)
+    max_index_row = max_index(i)-1;
+    plot(eta(1:max_index_row), Optimal_max_nadir_angle(i,1:max_index_row), 'LineWidth', 1.5);
+    hold on;
+end
+xlabel('Nadir Angle (\eta) [degrees]');
+ylabel('Optimal Nadir Angle [degrees]');
+title('\epsilon vs Optimal Nadir');
+legend('H = 200 km', 'H = 500 km', 'H = 700 km', 'H = 1000 km', 'H = 1500 km', 'H = 2000 km');
+grid on;
+hold off;
+
+% Plotting eta vs Non_nadir_resolution_along_track for different H values
+figure;
+for i = 1:length(H)
+    max_index_row = max_index(i)-1;
+    plot(eta(1:max_index_row), Non_nadir_resolution_along_track(i,1:max_index_row), 'LineWidth', 1.5);
+    hold on;
+end
+xlabel('Nadir Angle (\eta) [degrees]');
+ylabel('Non-nadir Resolution Along Track [m]');
+title('Non-nadir Resolution Along Track vs \eta for Different H Values');
+legend('H = 200 km', 'H = 500 km', 'H = 700 km', 'H = 1000 km', 'H = 1500 km', 'H = 2000 km');
+grid on;
+hold off;
+
+figure;
+for i = 1:length(H)
+    max_index_row = max_index(i)-1;
+    plot(eta(1:max_index_row), Slant_height(i,1:max_index_row), 'LineWidth', 1.5);
+    hold on;
+end
+xlabel('Nadir Angle (\eta) [degrees]');
+ylabel('Slant Height [m]');
+title('Max Slant Height vs \eta for Different H Values');
+legend('H = 200 km', 'H = 500 km', 'H = 700 km', 'H = 1000 km', 'H = 1500 km', 'H = 2000 km');
+grid on;
+hold off;
+
